@@ -15,6 +15,8 @@ services:
     app:
       build: .
       container_name: todo_app
+      ports:
+        - "8080:8080"           # Открывает "окно" в контейнер
       restart: on-failure
       depends_on:
         - db

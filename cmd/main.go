@@ -5,11 +5,14 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"net/http"
 
 	"github.com/jackc/pgx/v4/pgxpool"
 	"github.com/joho/godotenv"
+	"github.com/go-chi/chi/v4"
 
 	"todo-proj/internal/database"
+	"todo-proj/internal/handlers"
 )
 
 func main() {
@@ -33,6 +36,15 @@ func main() {
 		os.Exit(1)
 	}
 	defer dbpool.Close()
+
+
+	r := chi.NewRouter()
+	r.Get("/health", handlers.HealthCheck) //Маршрут для проверки
+	fmt.Println("Сервер запущен на :8080")
+	//Запускаем сервер, он будет "висеть" и ждать запросов
+	if err := http.ListenAndServe(":8080", r); err != nil {
+		log.Fatalf("Ошибка запуска сервера: %v", err)
+	}
 
 	//проверка связи
 	err = dbpool.Ping(context.Background())
