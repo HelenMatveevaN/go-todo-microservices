@@ -55,8 +55,12 @@ func main() {
 	if err != nil {
 		log.Fatalf("База не отвечает: %v", err)
 	}
-
 	fmt.Println("Ура! Мы успешно подключились к Postgres на Go!")
+
+	err = database.InitDatabase(dbpool)
+	if err != nil {
+		log.Fatalf("Ошибка миграции: %v", err)
+	}
 
 	err = database.CreateTask(dbpool, "Помыть пол через неделю")
 	if err != nil {

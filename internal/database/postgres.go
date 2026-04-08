@@ -95,5 +95,23 @@ func UpdateTaskStatus(db *pgxpool.Pool, id int, IsDone bool) error {
 	return nil
 }
 
+func InitDatabase(pool *pgxpool.Pool) error {
+	query := `
+	create table if not exists tasks (
+		id 			SERIAL	primary key,
+		title 		text	not null,
+		content		text,
+		is_done		boolean	default false,
+		created_at	timestamp	default now()
+	);`
+
+	_, err := pool.Exec(context.Background(), query)
+	if err != nil {
+		return fmt.Errorf("не удалось инициализировать базу: %w", err)
+	}
+
+	fmt.Println("База данных проверена и готова к работе!")
+	return nil
+}
 
 
