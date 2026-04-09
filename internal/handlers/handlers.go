@@ -55,15 +55,17 @@ func (h *Handler) CreateTaskHandler (w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if newTask.Title == "" {
-		http.Error(w, "Название задачи не может быть пустым", http.StatusBadRequest)
-		return
-	}
-
-	//err := database.CreateTask(h.Pool, newTask.Title)
 	err := h.Service.Create(r.Context(), newTask.Title)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		// Проверяем, какая именно ошибка произошла
+		switch err {
+		case service.ErrTitleTooEmpty, service.ErrTitleTooLong:
+			//http.Error(w, err.Error(), http.StatusBadRequest) // Ошибка клиента (400)
+			sendJSONError(w, err.Error(), http.StatusBadRequest)
+		default:
+			//http.Error(w, "Внутренняя ошибка сервера", http.StatusInternalServerError) // Ошибка сервера (500)
+			sendJSONError(w, "Внутренняя ошибка сервера", http.StatusInternalServerError)
+		}
 		return
 	}
 
@@ -108,9 +110,19 @@ func (h *Handler) UpdateTaskHandler(w http.ResponseWriter, r *http.Request) {
 	//err = database.UpdateTaskStatus(h.Pool, id, input.IsDone)
 	err = h.Service.UpdateStatus(r.Context(), id, input.IsDone)
 	if err != nil {
-		http.Error(w, "Ошибка обновления", http.StatusInternalServerError)
+		if err == service.ErrTaskNotFound {
+			http.Error(w, err.Error(), http.StatusNotFound) //Отдаем 404
+		} else {
+			http.Error(w, "Ошибка сервера", http.StatusInternalServerError)
+		}
 		return
 	}
 
 	w.Write([]byte("Статус обновлен"))
+}
+
+func sendJSONError(w http.ResponseWriter, message string, code int) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(code)
+	json.NewEncoder(w).Encode(map[string]string{"error": message})
 }

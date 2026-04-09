@@ -2,11 +2,18 @@ package service
 
 import (
 	"context"
+	"errors"
 
 	"github.com/jackc/pgx/v4/pgxpool"
 
 	"todo-proj/internal/database"
 	"todo-proj/internal/models"
+)
+
+var (
+	ErrTitleTooEmpty = errors.New("название задачи не может быть пустым")
+	ErrTitleTooLong = errors.New("название задачи слишком длинное (макс. 100 символов)")
+	ErrTaskNotFound = errors.New("задача не найдена")
 )
 
 //что должен уметь наш сервис?
@@ -29,7 +36,10 @@ func NewTaskService(pool *pgxpool.Pool) TaskService {
 func (s *taskService) Create(ctx context.Context, title string) error {
 	//здесь будет бизнес-логика (валидация, доп.проверки)
 	if title == "" {
-		return database.ErrEmptyTitle //пример ошибки
+		return ErrTitleTooEmpty //database.ErrEmptyTitle //пример ошибки
+	}
+	if len(title) > 100 {
+		return ErrTitleTooLong
 	}
 	return database.CreateTask(s.pool, title)
 }
@@ -39,9 +49,20 @@ func (s *taskService) List(ctx context.Context) ([]models.Task, error) {
 }
 
 func (s *taskService) Delete(ctx context.Context, id int) error {
-	return database.DeleteTask(s.pool, id)
+	err := database.DeleteTask(s.pool, id)
+	if err != nil {
+		//здесь можно добавить логик: если ошибка от БД говорит "не найдено"
+		//но пока просто пробрасываем
+		return err
+	}
+	return nil
 }
 
 func (s *taskService) UpdateStatus(ctx context.Context, id int, isDone bool) error {
-	return database.UpdateTaskStatus(s.pool, id, isDone)
+	err := database.UpdateTaskStatus(s.pool, id, isDone)
+	if err != nil {
+		// Если в ошибке есть текст про "не найдена", возвращаем ErrTaskNotFound
+		return ErrTaskNotFound
+	}
+	return nil
 }

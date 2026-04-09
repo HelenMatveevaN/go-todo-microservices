@@ -67,27 +67,33 @@
 
         async function addTask() {
             const input = document.getElementById('taskInput');
-
-            // Проверка прямо на фронтенде перед отправкой
-            if (input.value.trim() === "") {
-                alert("Напиши хоть что-нибудь!");
-                return;
-            }
-
             const response = await fetch('/tasks', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({ title: input.value })
             });
 
+            const data = await response.json(); // ждем JSON от сервера
+
             if (!response.ok) {
-                alert("Ошибка: название не может быть пустым!");
+                //alert("Ошибка: название не может быть пустым!");
+                //Теперь берем текст ошибки из поля data.error
+                showError(data.error || "Что-то пошло не так");
                 return;
             }
 
             // ... очистка input и loadTasks()
             input.value = '';
             loadTasks();
+        }
+
+        // Вспомогательная функция для красивого вывода ошибок
+        function showError(msg) {
+            const errorDiv = document.createElement('div');
+            errorDiv.style.cssText = 'color: white; background: #dc3545; padding: 10px; border-radius: 5px; margin-bottom: 1-px; position: fixed; top: 20px; right: 20px;'
+            errorDiv.innerText = msg;
+            document.body.appendChild(errorDiv);
+            setTimeout(() => errorDiv.remove(), 3000); // Сама исчезнет через 3 секунды
         }
 
         // Добавим функцию переключения (PATCH)
