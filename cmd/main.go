@@ -16,51 +16,57 @@ import (
 )
 
 func main() {
-	//загрузка .env
-	err := godotenv.Load()
-	if err != nil {
-		log.Fatal("Ошибка загрузки .env файла")
+	// 1. Загрузка конфигов
+	if err := godotenv.Load(); err != nil {
+		log.Println("Предупреждение: .env не найден, берем переменные из окружения")
 	}
 
-	//строка подключения к бд
-	//connStr := "postgres://postgres:postgres@localhost:5432/todo_db"
 	connStr := os.Getenv("DATABASE_URL")
 	if connStr == "" {
-		log.Fatal("DATABASE_URL не задана в .env")
+		log.Fatal("DATABASE_URL не задана")
 	}
 
-	//пул соединений (+контекст, для создания контроля времени)
+	// 2. Подключение к БД (сразу делаем Ping)
 	dbpool, err := pgxpool.Connect(context.Background(), connStr)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Unable to create connection pool: %v\n", err)
-		os.Exit(1)
+		log.Fatalf("Ошибка подключения к БД: %v", err)
 	}
 	defer dbpool.Close()
 
-	//Подключаем http
-	h := &handlers.Handler{Pool: dbpool}
+	if err := dbpool.Ping(context.Background()); err != nil {
+		log.Fatalf("База не отвечает: %v", err)
+	}
+	fmt.Println("Успешное подключение к Postgres!")
 
+	// 3. Миграции (создание таблиц)
+	if err = database.InitDatabase(dbpool); err != nil {
+		log.Fatalf("Ошибка миграции: %v", err)
+	}
+
+	// 4. Настройка роутера
+	h := &handlers.Handler{Pool: dbpool}
+	
 	r := chi.NewRouter()
 	r.Get("/health", handlers.HealthCheck) //Маршрут для проверки
-	r.Get("/tasks", h.GetTasksHandler) //вызов метода через переменную
-	r.Post("/tasks", h.CreateTaskHandler) 
+
+    // Middleware для логов (очень полезно при разработке)
+    // r.Use(middleware.Logger)
 	
+	r.Route("/tasks", func(r chi.Router) {
+		r.Get("/", h.GetTasksHandler)
+		r.Post("/", h.CreateTaskHandler)
+		r.Delete("/{id}", h.DeleteTaskHandler)
+		r.Patch("/{id}", h.UpdateTaskHandler)
+	})
+
+	// 5. ЗАПУСК СЕРВЕРА (это всегда в самом конце)
 	fmt.Println("Сервер запущен на :8080")
 	if err := http.ListenAndServe(":8080", r); err != nil { //Запускаем сервер, он будет "висеть" и ждать запросов
 		log.Fatalf("Ошибка запуска сервера: %v", err)
 	}
 
-	//проверка связи
-	err = dbpool.Ping(context.Background())
-	if err != nil {
-		log.Fatalf("База не отвечает: %v", err)
-	}
-	fmt.Println("Ура! Мы успешно подключились к Postgres на Go!")
-
-	err = database.InitDatabase(dbpool)
-	if err != nil {
-		log.Fatalf("Ошибка миграции: %v", err)
-	}
+	/*
+	//Первоначальный код для отладки
 
 	err = database.CreateTask(dbpool, "Помыть пол через неделю")
 	if err != nil {
@@ -90,6 +96,7 @@ func main() {
 		}
 		fmt.Printf("[%d] %s %s\n", t.ID, status, t.Title)
 	}
+	*/
 }
 
 
