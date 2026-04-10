@@ -23,12 +23,17 @@ import (
 func main() {
 	// 1. Загрузка конфигов
 	if err := godotenv.Load(); err != nil {
-		log.Println("Предупреждение: .env не найден, берем переменные из окружения")
+		log.Println("Предупреждение: .env не найден, используем системные переменные")
 	}
 
-	connStr := os.Getenv("DATABASE_URL")
+	connStr := os.Getenv("DB_URL")
 	if connStr == "" {
-		log.Fatal("DATABASE_URL не задана")
+		log.Fatal("Ошибка: переменная DB_URL не установлена")
+	}
+
+	port := os.Getenv("SERVER_PORT")
+	if port == "" {
+		port = ":8080" //значение по умолчанию
 	}
 
 	// 2. Подключение к БД
