@@ -2,15 +2,16 @@ package main
 
 import (
 	"context"
-	"fmt"
+	//"fmt"
 	"log"
+	"log/slog" // Новый стандарт Go 1.21
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
-	"todo-proj/internal/database"
+	//"todo-proj/internal/database"
 	"todo-proj/internal/handlers"
 	"todo-proj/internal/service"
 
@@ -19,32 +20,36 @@ import (
 )
 
 func main() {
-	// 1. Инициализация конфига
+	// 1. Настройка логирования (JSON формат удобен для Docker)
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+	slog.SetDefault(logger)
+
+	// 2. Инициализация конфига
 	cfg := loadConfig()
 
-	// 2. Инициализация БД
+	// 3. Инициализация БД  (теперь с retry)
 	dbpool := setupDatabase(cfg.dbURL)
 	defer dbpool.Close()
 
-	// 3. Сборка слоев приложения
+	// 4. Сборка слоев приложения
 	taskSvc := service.NewTaskService(dbpool)
 	h := &handlers.Handler{Service: taskSvc}
-	router := handlers.NewRouter(h) // Перенесли настройку chi внутрь
+	router := handlers.NewRouter(h)
 
-	// 4. Запуск сервера
+	// 5. Запуск сервера
 	srv := &http.Server{
 		Addr:    cfg.port,
 		Handler: router,
 	}
 
 	go func() {
-		log.Printf("Сервер запущен на %s", cfg.port)
+		slog.Info("Cервер запущен", "addr", cfg.port)
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("Ошибка сервера: %v", err)
+			slog.Error("ошибка сервера", "err", err)
 		}
 	}()
 
-	// 5. Ожидание завершения (Graceful Shutdown)
+	// 6. Graceful Shutdown
 	waitForShutdown(srv)	
 }
 
@@ -56,12 +61,12 @@ type config struct {
 
 func loadConfig() config {
 	if err := godotenv.Load(); err != nil {
-		log.Println("Инфо: .env не найден, используем системные переменные")
+		slog.Info(".env не найден, используем системные переменные")
 	}
 	
 	dbURL := os.Getenv("DB_URL")
 	if dbURL == "" {
-		log.Fatal("Ошибка: DB_URL не установлена")
+		log.Fatal("DB_URL не установлена")
 	}
 
 	port := os.Getenv("SERVER_PORT")
@@ -72,24 +77,38 @@ func loadConfig() config {
 }
 
 func setupDatabase(connStr string) *pgxpool.Pool {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
+	var err error
+	maxRetries := 5
+	delay := 2 * time.Second
 
-	pool, err := pgxpool.Connect(ctx, connStr)
-	if err != nil {
-		log.Fatalf("Критическая ошибка подключения к БД: %v", err)
+	for i := 1; i <= maxRetries; i++ {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+
+		pool, err := pgxpool.Connect(ctx, connStr)
+		if err == nil {
+			err := pool.Ping(ctx) // Проверяем реальную связь
+
+			if err == nil {
+				cancel() // Успех!
+				slog.Info("успешное подключение к Postgres")
+				return pool
+			}
+		}
+
+		// Если мы здесь, значит была ошибка (Connect или Ping)
+		cancel() // <--- Закрываем вручную при неудаче перед time.Sleep
+		slog.Warn("База еще не готова", 
+			"attempt", i, 
+			"max_attempts", maxRetries, 
+			"err", err)
+
+		if i < maxRetries {
+			time.Sleep(delay)
+		}
 	}
 
-	if err := pool.Ping(ctx); err != nil {
-		log.Fatalf("База не отвечает на Ping: %v", err)
-	}
-
-	if err := database.InitDatabase(pool); err != nil {
-		log.Fatalf("Ошибка миграции: %v", err)
-	}
-
-	fmt.Println("Успешное подключение к Postgres!")
-	return pool
+	log.Fatalf("не удалось подключиться к БД: %v", err)
+	return nil
 }
 
 func waitForShutdown(srv *http.Server) {
@@ -97,12 +116,12 @@ func waitForShutdown(srv *http.Server) {
 	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
 	<-quit
 
-	log.Println("Завершение работы сервера...")
+	slog.Info("завершение работы сервера...")
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	if err := srv.Shutdown(ctx); err != nil {
-		log.Fatalf("Ошибка при остановке: %v", err)
+		slog.Error("ошибка при остановке", "err", err)
 	}
-	log.Println("Сервер остановлен.")
+	slog.Info("сервер остановлен")
 }

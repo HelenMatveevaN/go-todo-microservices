@@ -1,4 +1,11 @@
-main
-todo-proj
+# Бинарные файлы
+todo-app
+goose
+
+# Переменные окружения
 .env
+
+# Зависимости и прочее
 .DS_Store
+vendor/
+*.log

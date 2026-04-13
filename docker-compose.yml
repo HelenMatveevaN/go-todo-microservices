@@ -1,7 +1,7 @@
 version: '3.8'
 
 services:
-    db:
+    todo_db:
       image: postgres:15-alpine
       container_name: todo_db
       restart: always
@@ -23,9 +23,9 @@ services:
         - "8080:8080"           # Открывает "окно" в контейнер
       restart: always
       depends_on:
-        - db
+        - todo_db
       environment:
-        - DB_URL=postgres://postgres:password@db:5432/todo_db
+        - DB_URL=postgres://postgres:password@todo_db:5432/todo_db
 
 volumes:
   postgres_data:

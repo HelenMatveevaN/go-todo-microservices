@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog" // Добавляем slog
 
 	"github.com/jackc/pgx/v4/pgxpool"
 
@@ -19,7 +20,7 @@ func CreateTask(db *pgxpool.Pool, title string) (models.Task, error) {
         title).Scan(&t.ID, &t.Title, &t.IsDone, &t.CreatedAt)
 
     if err == nil {
-        fmt.Printf("✅ Задача создана: ID=%d, Title=%s\n", t.ID, t.Title)
+        slog.Info("задача создана", "id", t.ID, "title", t.Title)
     }
     return t, err
 }
@@ -45,7 +46,7 @@ func GetTasks(db *pgxpool.Pool) ([]models.Task, error) {
 		tasks = append(tasks, t) //добавляем задачу в список
 	}
 
-    fmt.Printf("📋 Получен список задач: всего %d шт.\n", len(tasks))
+	slog.Info("получен список задач", "count", len(tasks))
 	return tasks, nil
 }
 
@@ -58,7 +59,7 @@ func GetTaskByID(db *pgxpool.Pool, id int) (models.Task, error) {
 		return t, err
 	}
 
-	fmt.Printf("🔍 Задача выбрана: ID=%d, Title=%s\n", id, t.Title) // Добавили детали в лог
+	slog.Info("задача выбрана", "id", id, "title", t.Title)
 	return t, nil
 }
 
@@ -70,12 +71,12 @@ func DeleteTask(db *pgxpool.Pool, id int) error {
 		return fmt.Errorf("не удалось удалить задачу с id %d: %w", id, err)
 	}
 
-	fmt.Printf("Задача с ID %d удалена \n", id)
+	slog.Info("задача удалена", "id", id)
 	return nil
 }
 
 func GetTasksByStatus(db *pgxpool.Pool, IsDone bool) ([]models.Task, error) {
-	query := `SELECT id, title, is_done FROM tasks WHERE is_done = $1`
+	query := `SELECT id, title, is_done, created_at FROM tasks WHERE is_done = $1`
 
 	rows, err := db.Query(context.Background(), query, IsDone)
 	if err != nil {
@@ -92,7 +93,7 @@ func GetTasksByStatus(db *pgxpool.Pool, IsDone bool) ([]models.Task, error) {
 		tasks = append(tasks, t)
 	}
 
-	fmt.Printf("📂 Фильтрация по статусу (is_done=%v): найдено %d шт.\n", IsDone, len(tasks))
+	slog.Info("фильтрация по статусу", "status", IsDone, "count", len(tasks))
 	return tasks, nil
 }
 
@@ -110,27 +111,7 @@ func UpdateTaskStatus(db *pgxpool.Pool, id int, IsDone bool) error {
 		return fmt.Errorf("задача с id %d не найдена", id)
 	}
 
-	fmt.Printf("Статус задачи %d изменен на %v\n", id, IsDone)
+	slog.Info("статус задачи изменен", "id", id, "is_done", IsDone)
 	return nil
 }
-
-func InitDatabase(pool *pgxpool.Pool) error {
-	query := `
-	create table if not exists tasks (
-		id 			SERIAL	primary key,
-		title 		text	not null,
-		content		text,
-		is_done		boolean	default false,
-		created_at	timestamp	default now()
-	);`
-
-	_, err := pool.Exec(context.Background(), query)
-	if err != nil {
-		return fmt.Errorf("не удалось инициализировать базу: %w", err)
-	}
-
-	fmt.Println("База данных проверена и готова к работе!")
-	return nil
-}
-
 
