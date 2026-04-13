@@ -1,11 +1,7 @@
-# Бинарные файлы
 todo-app
 goose
-
-# Переменные окружения
 .env
-
-# Зависимости и прочее
+coverage.out
 .DS_Store
 vendor/
 *.log

@@ -28,3 +28,7 @@ create: ## Создать новую миграцию (usage: make create name=a
 .PHONY: redo
 redo: ## Перезапустить последнюю миграцию (down + up)
 	goose -dir $migrations postgres $(DB_URL) redo
+
+.PHONY: test
+test: ## Запустить все тесты
+	go test -v -cover ./...

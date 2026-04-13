@@ -18,6 +18,17 @@ var (
 	ErrTaskInvalidTitle = errors.New("пустой заголовок")
 )
 
+// ValidateTask — та самая функция, которую ищет тест
+func ValidateTask(title string) error {
+	if title == "" {
+		return ErrTitleTooEmpty
+	}
+	if len(title) > 100 {
+		return ErrTitleTooLong
+	}
+	return nil
+}
+
 //что должен уметь наш сервис?
 type TaskService interface {
 	List(ctx context.Context) ([]models.Task, error)
@@ -37,7 +48,9 @@ func NewTaskService(pool *pgxpool.Pool) TaskService {
 }
 
 func (s *taskService) Create(ctx context.Context, title string) (models.Task, error) {
-	//здесь будет бизнес-логика (валидация, доп.проверки)
+	if err := ValidateTask(title); err != nil {
+		return models.Task{}, err
+	}	
 	if title == "" {
 		return models.Task{}, ErrTitleTooEmpty
 	}

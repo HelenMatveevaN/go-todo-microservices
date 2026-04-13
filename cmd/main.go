@@ -11,7 +11,6 @@ import (
 	"syscall"
 	"time"
 
-	//"todo-proj/internal/database"
 	"todo-proj/internal/handlers"
 	"todo-proj/internal/service"
 
