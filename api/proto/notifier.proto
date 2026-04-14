@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package notifier;
+option go_package = "./gen/notifier"; // где будет лежать сгенерированный код
+
+service Notifier {
+rpc SendNotification (NotificationRequest) returns (NotificationResponse);
+}
+
+message NotificationRequest {
+string message = 1;
+}
+
+message NotificationResponse {
+bool success = 1;
+}
