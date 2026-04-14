@@ -1,8 +1,9 @@
-module github.com/HelenMatveevaN/todo-proj
+module todo-proj
 
 go 1.21.0
 
 require (
+	github.com/HelenMatveevaN/todo-proj v0.0.0-20260414142153-b11afabbd7f8
 	github.com/go-chi/chi/v4 v4.1.3
 	github.com/ilyakaznacheev/cleanenv v1.5.0
 	github.com/jackc/pgx/v4 v4.18.3

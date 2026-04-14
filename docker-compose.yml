@@ -11,8 +11,17 @@ services:
         POSTGRES_DB: todo_db
       volumes:
         -   postgres_data:/var/lib/postgresql/data
+        -   ./migrations:/docker-entrypoint-initdb.d
       ports:
         - "5432:5432"
+
+    notifier:
+      build:
+        context: ../notifier-service # путь к папке с нотификатором
+      container_name: notifier_app
+      restart: always
+      ports:
+        - "50051:50051"
 
     app:
       env_file:
@@ -24,8 +33,10 @@ services:
       restart: always
       depends_on:
         - todo_db
+        - notifier # Ждем запуска нотификатора
       environment:
         - DATABASE_URL=postgres://postgres:password@todo_db:5432/todo_db
+        - NOTIFIER_ADDR=notifier:50051 
 
 volumes:
   postgres_data:

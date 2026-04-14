@@ -4,25 +4,57 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log/slog" // Добавляем slog
+	"log/slog"
+	"os"
+	"time"     
 
 	"github.com/jackc/pgx/v4/pgxpool"
+	pb "github.com/HelenMatveevaN/todo-proj/api/proto" // Путь к сгенерированным файлам
 
-	"todo-proj/internal/models"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
+
+	"todo-proj/internal/models"	
 )
 
 var ErrEmptyTitle = errors.New("название задачи не может быть пустым")
 
 func CreateTask(db *pgxpool.Pool, title string) (models.Task, error) {
+	//1. Сохраняем данные в базу
     var t models.Task
     err := db.QueryRow(context.Background(), 
         "INSERT INTO tasks (title) VALUES ($1) RETURNING id, title, is_done, created_at", 
         title).Scan(&t.ID, &t.Title, &t.IsDone, &t.CreatedAt)
 
-    if err == nil {
-        slog.Info("задача создана", "id", t.ID, "title", t.Title)
-    }
-    return t, err
+	// 2. "Звоним" в сервис уведомлений
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*2)
+	defer cancel()
+
+	addr := os.Getenv("NOTIFIER_ADDR")
+	if addr == "" {
+	    addr = "notifier:50051" // Значение по умолчанию для Docker
+	}
+
+	conn, err := grpc.Dial(addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		slog.Error("не удалось связаться с Notifier", "error", err)
+		return t, nil
+	}
+	defer conn.Close()
+
+	client := pb.NewNotifierClient(conn)
+	_, err = client.SendNotification(ctx, &pb.NotificationRequest{
+		TaskTitle: title,
+		Message:   "Ура! Новая задача создана в системе.",
+	})
+
+	if err != nil {
+		slog.Error("ошибка отправки gRPC уведомления", "error", err)
+	} else {
+		slog.Info("задача создана и уведомление отправлено", "id", t.ID)
+	}
+
+    return t, nil
 }
 
 // достает все задачи из базу и возвращает их в виде слайса
