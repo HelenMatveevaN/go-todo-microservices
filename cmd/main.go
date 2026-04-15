@@ -34,12 +34,12 @@ func main() {
 	// 4. Сборка слоев приложения
 	taskSvc := service.NewTaskService(dbpool)
 	h := &handlers.Handler{Service: taskSvc}
-	router := handlers.NewRouter(h)
+	router := handlers.NewRouter(h) // Все middleware уже внутри этого роутера!
 
 	// 5. Запуск сервера
 	srv := &http.Server{
 		Addr:    cfg.HTTP.Port,
-		Handler: router,
+		Handler: router, // Передаем chi.Mux напрямую
 	    ReadTimeout:  cfg.HTTP.Timeout,
 	    WriteTimeout: cfg.HTTP.Timeout,
 	}

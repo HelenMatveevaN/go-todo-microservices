@@ -2,6 +2,7 @@ package handlers
 
 import (
     "net/http"
+    "time"
 
     "github.com/go-chi/chi/v4"
     "github.com/go-chi/chi/v4/middleware"
@@ -11,24 +12,29 @@ import (
 func NewRouter(h *Handler) *chi.Mux {
     r := chi.NewRouter()
 
-    // 1. Middleware (промежуточное ПО)
-    r.Use(middleware.Logger)    // Логирует запросы в консоль
-    r.Use(middleware.Recoverer) // Спасает от паники (panic)
+    // 1. Стандартные Middleware
+    r.Use(middleware.RequestID)    // Добавляет ID к каждому запросу для трекинга
+    r.Use(middleware.RealIP)       // Определяет настоящий IP пользователя
+    r.Use(middleware.Logger)       // Логирует запросы
+    r.Use(middleware.Recoverer)    // Защита от паник
+
+    // Устанавливаем таймаут на обработку запроса
+    r.Use(middleware.Timeout(60 * time.Second))
 
     // 2. Маршруты API
     r.Get("/health", HealthCheck) // Простая проверка доступности
-    
+
     r.Route("/tasks", func(r chi.Router) {      
-        r.Get("/", h.GetTasksHandler)           // Получить все
-        r.Get("/{id}", h.GetTaskByIDHandler)    // Получить одну
-        r.Post("/", h.CreateTaskHandler)        // Создать
-        r.Delete("/{id}", h.DeleteTaskHandler)  // Удалить
-        r.Patch("/{id}", h.UpdateTaskHandler)   // Обновить (статус или текст)
+        r.Get("/", h.GetTasksHandler)           // GET /tasks
+        r.Get("/{id}", h.GetTaskByIDHandler)    // GET /tasks/123
+        r.Post("/", h.CreateTaskHandler)        // POST /tasks
+        r.Delete("/{id}", h.DeleteTaskHandler)  // DELETE /tasks/123
+        r.Patch("/{id}", h.UpdateTaskHandler)   // PATCH /tasks/123
     })
 
     // 3. Раздача статики (Frontend)
-    // Важно: папка static должна быть в корне проекта
-    r.Handle("/*", http.StripPrefix("/", http.FileServer(http.Dir("./static"))))
+    fs := http.FileServer(http.Dir("./static"))
+    r.Handle("/*", http.StripPrefix("/", fs))
     
     return r
 }
