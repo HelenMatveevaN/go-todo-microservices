@@ -34,12 +34,15 @@ var (
 func GetConfig() *Config {
 	once.Do(func() {
 		instance = &Config{}
-		// ReadConfig читает .env, а если его нет — берет системные переменные
-		if err := cleanenv.ReadConfig(".env", instance); err != nil {
-			log.Printf("Note: .env file not found or error reading: %v. Using system env vars.", err)
-			if err := cleanenv.ReadEnv(instance); err != nil {
-				log.Fatalf("Config error: %v", err)
-			}
+		
+		// Сначала пробуем прочитать .env (для локальной разработки)
+		// Если файла нет, cleanenv вернет ошибку, которую мы просто проигнорируем
+		_ = cleanenv.ReadConfig(".env", instance)
+		
+		// Затем читаем переменные окружения (они перекроют дефолты или данные из .env)
+		// Если даже обязательные переменные (env-required) не найдены — тогда падаем
+		if err := cleanenv.ReadEnv(instance); err != nil {
+			log.Fatalf("Config error: %v", err)
 		}
 	})
 	return instance
