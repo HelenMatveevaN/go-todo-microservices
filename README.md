@@ -22,9 +22,11 @@
 docker-compose up --build
 ```
 
-## API Gateway: http://localhost:8080
+## API Gateway: 
+http://localhost:8080
 
-## RabbitMQ Management: http://localhost:15672 (guest/guest)
+## RabbitMQ Management: 
+http://localhost:15672 (guest/guest)
 
 ## 🛡 Надежность (Resilience)
 
