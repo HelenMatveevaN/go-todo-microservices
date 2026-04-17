@@ -11,13 +11,21 @@ services:
         POSTGRES_DB: todo_db
       volumes:
         -   postgres_data:/var/lib/postgresql/data
+<<<<<<< HEAD
         -   ./todo-service/migrations:/docker-entrypoint-initdb.d
+=======
+        -   ./migrations:/docker-entrypoint-initdb.d
+>>>>>>> todo-proj/main
       ports:
         - "5432:5432"
 
     notifier:
       build:
+<<<<<<< HEAD
         context: ./notifier-service # путь к папке с нотификатором
+=======
+        context: ../notifier-service # путь к папке с нотификатором
+>>>>>>> todo-proj/main
       container_name: notifier_app
       restart: always
       ports:
@@ -38,6 +46,7 @@ services:
         - "5672:5672"   # Порт для связи (AMQP)
         - "15672:15672" # Админка (логин/пароль: guest/guest)
 
+<<<<<<< HEAD
     statistics:
       build:
         context: ./statistics-service
@@ -52,6 +61,12 @@ services:
       env_file:
         - .env
       build: ./todo-service
+=======
+    app:
+      env_file:
+        - .env
+      build: .
+>>>>>>> todo-proj/main
       container_name: todo_app
       restart: always      
       depends_on:

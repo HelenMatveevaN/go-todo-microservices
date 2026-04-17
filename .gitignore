@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Системные файлы
 .DS_Store
 Thumbs.db
@@ -18,3 +19,13 @@ notifier-app
 
 # Логи и временные файлы
 *.log
+=======
+todo-app
+goose
+.env
+coverage.out
+.DS_Store
+vendor/
+*.log
+protoc*
+>>>>>>> todo-proj/main
