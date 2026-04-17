@@ -3,7 +3,11 @@ syntax = "proto3";
 package notifier;
 
 //этот путь скажет генератору, куда положить go-код
+<<<<<<< HEAD
 option go_package = "todo-proj/api/proto;proto";
+=======
+option go_package = "github.com/HelenMatveevaN/todo-proj/api/proto;notifier";
+>>>>>>> notifier-proj/main
 
 service Notifier {
 	//Метод, который будет вызывать todo-сервис
