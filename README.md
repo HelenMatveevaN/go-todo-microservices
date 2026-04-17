@@ -36,6 +36,6 @@ http://localhost:15672 (guest/guest)
   
 ## 📄 Разработка
 Каждый сервис расположен в своей директории:
-**/todo-service** — основная бизнес-логика и миграции.
-**/notifier-service** — реализация gRPC сервера.
-**/statistics-service** — обработчик событий.
+/todo-service — основная бизнес-логика и миграции.
+/notifier-service — реализация gRPC сервера.
+/statistics-service — обработчик событий.
