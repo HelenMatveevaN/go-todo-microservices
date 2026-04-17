@@ -22,9 +22,11 @@
 docker-compose up --build
 ```
 
-## API Gateway: http://localhost:8080
+## API Gateway: 
+http://localhost:8080
 
-## RabbitMQ Management: http://localhost:15672 (guest/guest)
+## RabbitMQ Management: 
+http://localhost:15672 (guest/guest)
 
 ## 🛡 Надежность (Resilience)
 
@@ -34,6 +36,6 @@ docker-compose up --build
   
 ## 📄 Разработка
 Каждый сервис расположен в своей директории:
-**/todo-service** — основная бизнес-логика и миграции.
-**/notifier-service** — реализация gRPC сервера.
-**/statistics-service** — обработчик событий.
+*   /todo-service — основная бизнес-логика и миграции.
+*   /notifier-service — реализация gRPC сервера.
+*   /statistics-service — обработчик событий.
