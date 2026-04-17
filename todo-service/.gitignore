@@ -1,0 +1,8 @@
+todo-app
+goose
+.env
+coverage.out
+.DS_Store
+vendor/
+*.log
+protoc*

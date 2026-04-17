@@ -1,0 +1,72 @@
+version: '3.8'
+
+services:
+    todo_db:
+      image: postgres:15-alpine
+      container_name: todo_db
+      restart: always
+      environment:
+        POSTGRES_USER: postgres
+        POSTGRES_PASSWORD: password
+        POSTGRES_DB: todo_db
+      volumes:
+        -   postgres_data:/var/lib/postgresql/data
+        -   ./todo-service/migrations:/docker-entrypoint-initdb.d
+      ports:
+        - "5432:5432"
+
+    notifier:
+      build:
+        context: ./notifier-service # путь к папке с нотификатором
+      container_name: notifier_app
+      restart: always
+      ports:
+        - "50051:50051"
+
+    todo_redis:
+      image: redis:7-alpine
+      container_name: todo_redis
+      restart: always
+      ports:
+        - "6379:6379"
+
+    rabbitmq:
+      image: rabbitmq:3-management-alpine
+      container_name: rabbitmq
+      restart: always
+      ports:
+        - "5672:5672"   # Порт для связи (AMQP)
+        - "15672:15672" # Админка (логин/пароль: guest/guest)
+
+    statistics:
+      build:
+        context: ./statistics-service
+      container_name: statistics_app
+      restart: always
+      depends_on:
+        - rabbitmq
+      environment:
+        - RABBIT_URL=amqp://guest:guest@rabbitmq:5672/        
+
+    app:
+      env_file:
+        - .env
+      build: ./todo-service
+      container_name: todo_app
+      restart: always      
+      depends_on:
+        - todo_db
+        - notifier # Ждем запуска нотификатора
+        - todo_redis # Ждем и Redis тоже
+        - rabbitmq # ТЕПЕРЬ ЖДЕМ И RABBIT
+      environment:
+        - DATABASE_URL=postgres://postgres:password@todo_db:5432/todo_db
+        - NOTIFIER_ADDR=notifier:50051
+        - REDIS_HOST=todo_redis:6379 # Прокидываем адрес Redis приложению
+        # ДОБАВЛЯЕМ ПЕРЕМЕННУЮ ДЛЯ RABBIT
+        - RABBIT_URL=amqp://guest:guest@rabbitmq:5672/
+      ports:
+        - "8080:8080"           # Открывает "окно" в контейнер
+
+volumes:
+  postgres_data:

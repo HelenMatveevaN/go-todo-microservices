@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Мой Go To-Do</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f4f4f9; display: flex; justify-content: center; padding: 50px; }
+        .container { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 400px; }
+        
+        .input-group { display: flex; gap: 10px; margin-bottom: 20px; }
+        input[type="text"] { flex-grow: 1; padding: 10px; border: 1px solid #ddd; border-radius: 6px; }
+        button#addBtn { padding: 10px 15px; background: #28a745; color: white; border: none; border-radius: 6px; cursor: pointer; }
+        
+        .task { 
+            display: flex; 
+            align-items: center; 
+            padding: 12px 0; 
+            border-bottom: 1px solid #eee; 
+            gap: 10px; 
+        }
+        .task span { flex-grow: 1; font-size: 16px; }
+        .done { text-decoration: line-through; color: #a0a0a0; }
+        
+        input[type="checkbox"] { width: 18px; height: 18px; cursor: pointer; }
+        .del-btn { background: none; border: none; font-size: 18px; cursor: pointer; color: #dc3545; transition: 0.2s; }
+        .del-btn:hover { transform: scale(1.2); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h3>Мои задачи</h3>
+        <div class="input-group">
+            <input type="text" id="taskInput" placeholder="Что нужно сделать?">
+            <button id="addBtn" onclick="addTask()">Добавить</button>
+        </div>
+
+        <p style="font-size: 12px; color: gray;">
+            Всего задач: <span id="counter">0</span>
+        </p>
+
+        <div id="tasks"></div>
+    </div>
+
+
+
+    <script>
+        async function loadTasks() {
+            const r = await fetch('/tasks');
+            const response = await r.json();
+            const tasks = response.data || []; // Берем данные из поля data
+
+            document.getElementById('counter').innerText = tasks.length;
+
+            document.getElementById('tasks').innerHTML = tasks.map(t => {
+                const taskId = t.id || t.ID;
+                const isDone = t.is_done !== undefined ? t.is_done : t.IsDone;
+                return `
+                    <div class="task">
+                        <input type="checkbox" ${isDone ? 'checked' : ''} 
+                            onchange="toggleTask(${taskId}, this.checked)">
+                        <span class="${isDone ? 'done' : ''}">${t.title || t.Title}</span>
+                        <button onclick="deleteTask(${taskId})">🗑</button>
+                    </div>
+                `;
+            }).join('');
+        }
+
+
+        async function addTask() {
+            const input = document.getElementById('taskInput');
+            if (!input.value.trim()) return; // Не отправляем пустые
+
+            try {
+                const response = await fetch('/tasks', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ title: input.value })
+                });
+
+                if (!response.ok) {
+                    const data = await response.json(); // Читаем ошибку, только если статус плохой
+                    showError(result.error);
+                    return;
+                }
+
+            // Если все успешно:
+            input.value = '';
+            await loadTasks();
+            } catch (e) {
+                console.error("Ошибка сети или парсинга:", e);
+                showError("Не удалось связаться с сервером");
+            }
+        }
+
+        // Вспомогательная функция для красивого вывода ошибок
+        function showError(msg) {
+            const errorDiv = document.createElement('div');
+            errorDiv.style.cssText = 'color: white; background: #dc3545; padding: 10px; border-radius: 5px; margin-bottom: 1-px; position: fixed; top: 20px; right: 20px;'
+            errorDiv.innerText = msg;
+            document.body.appendChild(errorDiv);
+            setTimeout(() => errorDiv.remove(), 3000); // Сама исчезнет через 3 секунды
+        }
+
+        // Добавим функцию переключения (PATCH)
+        async function toggleTask(id, isDone) {
+            await fetch(`/tasks/${id}`, {
+                method: 'PATCH',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ is_done: isDone })
+            });
+            loadTasks();
+        }
+
+        async function deleteTask(id) {
+            await fetch(`/tasks/${id}`, { method: 'DELETE' });
+            loadTasks();
+        }
+
+        loadTasks();
+    </script>
+</body>
+</html>

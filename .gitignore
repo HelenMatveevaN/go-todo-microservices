@@ -1,0 +1,20 @@
+# Системные файлы
+.DS_Store
+Thumbs.db
+
+# Конфиденциальные данные
+.env
+*.env
+
+# Бинарные файлы (скомпилированный код)
+todo-app
+stats-app
+notifier-app
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Логи и временные файлы
+*.log
